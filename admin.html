@@ -220,6 +220,51 @@
         .btn-delete:hover {
             opacity: 0.9;
         }
+        /* Animasyonlar */
+@keyframes slideIn {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+@keyframes slideOut {
+    from {
+        transform: translateX(0);
+        opacity: 1;
+    }
+    to {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+}
+
+/* Scrollbar stilleri */
+#ipLogListesi::-webkit-scrollbar,
+#banliIpListesi::-webkit-scrollbar {
+    width: 4px;
+}
+
+#ipLogListesi::-webkit-scrollbar-track,
+#banliIpListesi::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 2px;
+}
+
+#ipLogListesi::-webkit-scrollbar-thumb,
+#banliIpListesi::-webkit-scrollbar-thumb {
+    background: #c8d6e5;
+    border-radius: 2px;
+}
+
+#ipLogListesi::-webkit-scrollbar-thumb:hover,
+#banliIpListesi::-webkit-scrollbar-thumb:hover {
+    background: #8395a7;
+}
     </style>
 </head>
 
@@ -299,7 +344,68 @@
                 </table>
             </div>
         </div>
-
+<!-- IP YÖNETİM PANELİ - YENİ TASARIM -->
+<div class="panel-box" style="margin-top: 20px; background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);">
+    <h2 style="color: #2c5e43; border-bottom: 2px solid #2c5e43;">
+        <i class="fas fa-shield-halved" style="color: #2c5e43;"></i> 
+        IP Yönetim Paneli
+        <span style="font-size:12px; font-weight:normal; color:#888; margin-left:10px;">
+            <i class="fas fa-circle" style="color:#28a745; font-size:8px;"></i> Canlı
+        </span>
+    </h2>
+    
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+        
+        <!-- SOL: IP Logları -->
+        <div style="background: white; border-radius: 10px; padding: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.06);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                <h3 style="margin:0; font-size:14px; color:#333; display:flex; align-items:center; gap:8px;">
+                    <i class="fas fa-list" style="color:#2c5e43;"></i> 
+                    Ziyaretçi Logları
+                    <span id="ipLogSayisi" style="font-size:11px; background:#2c5e43; color:white; padding:1px 8px; border-radius:10px;">0</span>
+                </h3>
+                <button onclick="ipLoglariniTemizle()" style="background:transparent; color:#dc3545; border:1px solid #dc3545; padding:4px 12px; border-radius:4px; cursor:pointer; font-size:11px; transition:0.2s;" 
+                        onmouseover="this.style.background='#dc3545'; this.style.color='white';" 
+                        onmouseout="this.style.background='transparent'; this.style.color='#dc3545';">
+                    <i class="fas fa-trash"></i> Temizle
+                </button>
+            </div>
+            <div id="ipLogListesi" style="max-height:250px; overflow-y:auto; border-radius:6px; background:#fafafa; padding:5px;">
+                <p style="color:#999; text-align:center; padding:20px 0;">
+                    <i class="fas fa-spinner fa-spin"></i> Yükleniyor...
+                </p>
+            </div>
+        </div>
+        
+        <!-- SAĞ: Banlı IP'ler -->
+        <div style="background: white; border-radius: 10px; padding: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.06);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                <h3 style="margin:0; font-size:14px; color:#333; display:flex; align-items:center; gap:8px;">
+                    <i class="fas fa-ban" style="color:#dc3545;"></i> 
+                    Banlı IP'ler
+                    <span id="banliIpSayisi" style="font-size:11px; background:#dc3545; color:white; padding:1px 8px; border-radius:10px;">0</span>
+                </h3>
+                <div style="display:flex; gap:6px;">
+                    <input type="text" id="banIpInput" placeholder="192.168.1.1" 
+                           style="padding:4px 10px; border:1px solid #ddd; border-radius:4px; font-size:12px; width:130px; outline:none; transition:0.2s;"
+                           onfocus="this.style.borderColor='#2c5e43'"
+                           onblur="this.style.borderColor='#ddd'">
+                    <button onclick="ipBanla()" style="background:#dc3545; color:white; border:none; padding:4px 15px; border-radius:4px; cursor:pointer; font-size:12px; font-weight:600; transition:0.2s;"
+                            onmouseover="this.style.background='#c82333'"
+                            onmouseout="this.style.background='#dc3545'">
+                        <i class="fas fa-plus"></i> Banla
+                    </button>
+                </div>
+            </div>
+            <div id="banliIpListesi" style="max-height:200px; overflow-y:auto; border-radius:6px; background:#fafafa; padding:5px;">
+                <p style="color:#999; text-align:center; padding:20px 0;">
+                    <i class="fas fa-spinner fa-spin"></i> Yükleniyor...
+                </p>
+            </div>
+        </div>
+        
+    </div>
+</div>
     </div>
 
     <script src="admin.js"></script>
