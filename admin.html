@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Organik Ürün Yönetim Paneli</title>
+    <title>Ürün Yönetim Paneli</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         :root {
@@ -220,6 +220,63 @@
         .btn-delete:hover {
             opacity: 0.9;
         }
+
+        /* === KATEGORİ ARAYÜZÜ === */
+        .kategori-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 14px;
+            border-radius: 20px;
+            border: 1.5px solid var(--primary);
+            background: var(--white);
+            color: var(--primary);
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            user-select: none;
+            transition: 0.15s;
+        }
+
+        .kategori-tag:hover {
+            background: #eef6f0;
+        }
+
+        .kategori-tag.secili {
+            background: var(--primary);
+            color: var(--white);
+        }
+
+        .kategori-tag .sil-x {
+            margin-left: 2px;
+            color: var(--danger);
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .kategori-badge {
+            display: inline-block;
+            background: #e8f5e9;
+            color: var(--primary);
+            border: 1px solid #cfe9d8;
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+            margin: 2px;
+        }
+
+        .checkbox-kategori {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            background: var(--bg);
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: normal;
+            cursor: pointer;
+        }
         /* Animasyonlar */
 @keyframes slideIn {
     from {
@@ -318,25 +375,50 @@
                     <label for="productImage">Ürün Görseli Seçin:</label>
                     <input type="file" id="productImage" accept="image/*">
                 </div>
+                <div class="form-group">
+                    <label>Kategoriler (birden fazla seçilebilir):</label>
+                    <div id="productCategoryCheckboxes" style="display:flex; flex-wrap:wrap; gap:8px; max-height:160px; overflow-y:auto; border:1px solid #ccc; border-radius:6px; padding:10px;">
+                        <p style="color:#999; margin:0;">Yükleniyor...</p>
+                    </div>
+                </div>
                 <button class="btn-submit" onclick="urunEkle()"><i class="fas fa-save"></i> Ürünü Veritabanına Kaydet</button>
+            </div>
+        </div>
+
+        <!-- KATEGORİ YÖNETİM PANELİ -->
+        <div class="panel-box" style="margin-top: 20px;">
+            <h2><i class="fas fa-tags"></i> Kategori Yönetimi</h2>
+            <div style="display:flex; gap:10px; margin-bottom:15px;">
+                <input type="text" id="yeniKategoriAdi" placeholder="Yeni kategori adı (Örn: Bal)" style="flex:1; padding:10px 12px; border:1px solid #ccc; border-radius:6px; font-size:14px;">
+                <button class="btn-submit" style="width:auto; padding:10px 20px; white-space:nowrap;" onclick="kategoriEkle()"><i class="fas fa-plus"></i> Ekle</button>
+            </div>
+            <div id="kategoriListesi" style="display:flex; flex-wrap:wrap; gap:8px;">
+                <p style="color:#999;">Yükleniyor...</p>
             </div>
         </div>
 
         <div class="panel-box" style="margin-top: 20px;">
             <h2><i class="fas fa-boxes-stacked"></i> Veritabanındaki Güncel Ürünler</h2>
+            <div style="margin-bottom: 18px;">
+                <label style="font-weight:600; font-size:14px; color:#555; display:block; margin-bottom:8px;">Kategoriye Göre Filtrele:</label>
+                <div id="adminKategoriFiltre" style="display:flex; flex-wrap:wrap; gap:8px;">
+                    <p style="color:#999;">Yükleniyor...</p>
+                </div>
+            </div>
             <div class="table-wrapper">
                 <table id="urunTablosu">
                     <thead>
                         <tr>
                             <th>Görsel</th>
                             <th>Ürün Adı</th>
+                            <th>Kategoriler</th>
                             <th>Fiyat (TL)</th>
                             <th style="text-align: center;">İşlem</th>
                         </tr>
                     </thead>
                     <tbody id="urunListesi">
                         <tr>
-                            <td colspan="4" style="text-align: center; color: #666; padding: 20px;">
+                            <td colspan="5" style="text-align: center; color: #666; padding: 20px;">
                                 <i class="fas fa-spinner fa-spin"></i> Ürün verileri yükleniyor...
                             </td>
                         </tr>

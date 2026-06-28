@@ -41,6 +41,7 @@ const db = new sqlite3.Database("./Organic.db", (hata) => {
     console.error("Veri tabanına bağlanırken hata oluştu:", hata.message);
   } else {
     console.log("Organic.db veri tabanına başarıyla bağlanıldı.");
+    db.run("PRAGMA foreign_keys = ON");
     tablolariKur();
   }
 });
@@ -115,6 +116,38 @@ function tablolariKur() {
     sebep TEXT,
     tarih TEXT
 )`);
+
+  // 6. Kategoriler Tablosu (YENİ)
+  db.run(
+    `CREATE TABLE IF NOT EXISTS kategoriler (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        isim TEXT NOT NULL UNIQUE
+    )`,
+    (err) => {
+      if (!err) {
+        // Tablo ilk kurulduğunda boşsa örnek kategoriler eklenir (mevcut kategorilere dokunulmaz)
+        const varsayilanKategoriler = ["Süt", "Yoğurt", "Peynir", "Tereyağı", "Yumurta"];
+        db.get(`SELECT COUNT(*) as adet FROM kategoriler`, [], (e, row) => {
+          if (!e && row && row.adet === 0) {
+            varsayilanKategoriler.forEach((isim) => {
+              db.run(`INSERT OR IGNORE INTO kategoriler (isim) VALUES (?)`, [isim]);
+            });
+          }
+        });
+      }
+    },
+  );
+
+  // 7. Ürün-Kategori İlişki Tablosu (ÇOK-ÇOKA İLİŞKİ / YENİ)
+  // Bir ürün birden fazla kategoriye, bir kategori de birden fazla ürüne sahip olabilir.
+  db.run(`CREATE TABLE IF NOT EXISTS urun_kategorileri (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        urun_id INTEGER NOT NULL,
+        kategori_id INTEGER NOT NULL,
+        UNIQUE(urun_id, kategori_id),
+        FOREIGN KEY (urun_id) REFERENCES urunler(id) ON DELETE CASCADE,
+        FOREIGN KEY (kategori_id) REFERENCES kategoriler(id) ON DELETE CASCADE
+    )`);
 }
 
 // --- API ENDPOINTLERİ ---
@@ -181,9 +214,68 @@ app.get("/api/telegram-ayarlari", (istek, cevap) => {
   });
 });
 
-// 4. Ürün Ekleme (Görsel Yükleme Destekli)
+// [KAPI] Tüm Kategorileri Listele
+app.get("/api/kategoriler", (istek, cevap) => {
+  db.all(`SELECT * FROM kategoriler ORDER BY isim ASC`, [], (hata, satirlar) => {
+    if (hata) return cevap.status(500).json({ durum: "hata", mesaj: hata.message });
+    cevap.json(satirlar || []);
+  });
+});
+
+// [KAPI] Yeni Kategori Ekle
+app.post("/api/kategori-ekle", (istek, cevap) => {
+  const isim = (istek.body.isim || "").trim();
+  if (!isim) {
+    return cevap.status(400).json({ durum: "hata", mesaj: "Kategori adı boş olamaz!" });
+  }
+  db.run(`INSERT INTO kategoriler (isim) VALUES (?)`, [isim], function (hata) {
+    if (hata) {
+      if (hata.message.includes("UNIQUE")) {
+        return cevap.json({ durum: "hata", mesaj: "Bu kategori zaten mevcut!" });
+      }
+      return cevap.status(500).json({ durum: "hata", mesaj: hata.message });
+    }
+    cevap.json({ durum: "başarılı", mesaj: "Kategori eklendi!", id: this.lastID, isim });
+  });
+});
+
+// [KAPI] Kategori Sil
+app.delete("/api/kategori-sil/:id", (istek, cevap) => {
+  const id = istek.params.id;
+  db.run(`DELETE FROM kategoriler WHERE id = ?`, [id], function (hata) {
+    if (hata) return cevap.status(500).json({ durum: "hata", mesaj: hata.message });
+    // İlişkili ürün-kategori bağlarını da temizle (garanti olsun diye manuel siliyoruz)
+    db.run(`DELETE FROM urun_kategorileri WHERE kategori_id = ?`, [id], () => {
+      cevap.json({ durum: "başarılı", mesaj: "Kategori silindi!" });
+    });
+  });
+});
+
+// 4. Ürün Ekleme (Görsel Yükleme + Çoklu Kategori Destekli)
 app.post("/api/urun-ekle", upload.single("urunResmi"), (istek, cevap) => {
-  const { isim, fiyat } = istek.body;
+  const isim = (istek.body.isim || "").trim();
+  const fiyat = Number(istek.body.fiyat);
+
+  // Eski sürümde burada doğrulama yoktu; isim boş veya fiyat geçersiz gönderilirse
+  // veritabanı satırı bozuk ekleniyor ve liste/ekleme akışı şaşırtıcı şekilde bozuluyordu.
+  if (!isim || !istek.body.fiyat || isNaN(fiyat)) {
+    return cevap
+      .status(400)
+      .json({ durum: "hata", mesaj: "Ürün adı ve geçerli bir fiyat girilmesi zorunludur!" });
+  }
+
+  // Kategoriler client tarafından JSON dizi olarak gönderiliyor, örn: "[1,3,7]"
+  let kategoriIdleri = [];
+  try {
+    kategoriIdleri = JSON.parse(istek.body.kategoriler || "[]");
+    if (!Array.isArray(kategoriIdleri)) kategoriIdleri = [];
+  } catch (e) {
+    kategoriIdleri = [];
+  }
+  kategoriIdleri = kategoriIdleri
+    .map((k) => Number(k))
+    .filter((k) => Number.isInteger(k) && k > 0);
+
   let gorselYolu = "images/default.png";
   if (istek.file) {
     gorselYolu = "images/" + istek.file.filename;
@@ -194,39 +286,88 @@ app.post("/api/urun-ekle", upload.single("urunResmi"), (istek, cevap) => {
     if (hata) {
       return cevap.status(500).json({ durum: "hata", mesaj: hata.message });
     }
-    cevap.json({
-      durum: "başarılı",
-      mesaj: "Ürün başarıyla kaydedildi!",
-      id: this.lastID,
+    const yeniUrunId = this.lastID;
+
+    if (kategoriIdleri.length === 0) {
+      return cevap.json({
+        durum: "başarılı",
+        mesaj: "Ürün başarıyla kaydedildi!",
+        id: yeniUrunId,
+      });
+    }
+
+    // Seçilen tüm kategorilerle bağlantı satırlarını ekle (çok-çoka ilişki)
+    const eklemeIslemleri = kategoriIdleri.map(
+      (katId) =>
+        new Promise((resolve) => {
+          db.run(
+            `INSERT OR IGNORE INTO urun_kategorileri (urun_id, kategori_id) VALUES (?, ?)`,
+            [yeniUrunId, katId],
+            () => resolve(),
+          );
+        }),
+    );
+
+    Promise.all(eklemeIslemleri).then(() => {
+      cevap.json({
+        durum: "başarılı",
+        mesaj: "Ürün başarıyla kaydedildi!",
+        id: yeniUrunId,
+      });
     });
   });
 });
 
-// [KAPI] Veritabanındaki Tüm Ürünleri Listeleme Kapısı
+// [KAPI] Veritabanındaki Tüm Ürünleri Listeleme Kapısı (Kategorili)
 app.get("/api/urunler", (istek, cevap) => {
-  const sorgu = `SELECT * FROM urunler ORDER BY id DESC`;
+  // Tek sorguda tüm ürünleri kategorileriyle birlikte getiriyoruz (performans için)
+  const sorgu = `
+    SELECT
+      u.id, u.isim, u.fiyat, u.gorsel,
+      GROUP_CONCAT(k.id) as kategori_idleri,
+      GROUP_CONCAT(k.isim, '||') as kategori_isimleri
+    FROM urunler u
+    LEFT JOIN urun_kategorileri uk ON uk.urun_id = u.id
+    LEFT JOIN kategoriler k ON k.id = uk.kategori_id
+    GROUP BY u.id
+    ORDER BY u.id DESC
+  `;
   db.all(sorgu, [], (hata, satirlar) => {
     if (hata) {
       console.error("Ürünler getirilemedi:", hata.message);
       return cevap.status(500).json({ durum: "hata", mesaj: hata.message });
     }
-    cevap.json(satirlar || []); // Boşsa boş array döner, asla HTML dönmez!
+    const sonuc = (satirlar || []).map((satir) => ({
+      id: satir.id,
+      isim: satir.isim,
+      fiyat: satir.fiyat,
+      gorsel: satir.gorsel,
+      kategoriler: satir.kategori_idleri
+        ? satir.kategori_idleri.split(",").map(Number)
+        : [],
+      kategoriIsimleri: satir.kategori_isimleri
+        ? satir.kategori_isimleri.split("||")
+        : [],
+    }));
+    cevap.json(sonuc); // Boşsa boş array döner, asla HTML dönmez!
   });
 });
 
 // [KAPI] Ürün Silme Kapısı
 app.delete("/api/urun-sil/:id", (istek, cevap) => {
   const urunId = istek.params.id;
-  const sorgu = `DELETE FROM urunler WHERE id = ?`;
 
-  db.run(sorgu, [urunId], function (hata) {
-    if (hata) {
-      console.error("Ürün silinirken hata oluştu:", hata.message);
-      return cevap.status(500).json({ durum: "hata", mesaj: hata.message });
-    }
-    cevap.json({
-      durum: "başarılı",
-      mesaj: "Ürün başarıyla veritabanından silindi!",
+  // Önce ürün-kategori bağlantılarını temizle, sonra ürünü sil
+  db.run(`DELETE FROM urun_kategorileri WHERE urun_id = ?`, [urunId], () => {
+    db.run(`DELETE FROM urunler WHERE id = ?`, [urunId], function (hata) {
+      if (hata) {
+        console.error("Ürün silinirken hata oluştu:", hata.message);
+        return cevap.status(500).json({ durum: "hata", mesaj: hata.message });
+      }
+      cevap.json({
+        durum: "başarılı",
+        mesaj: "Ürün başarıyla veritabanından silindi!",
+      });
     });
   });
 });

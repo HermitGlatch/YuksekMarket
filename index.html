@@ -3,9 +3,52 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Çiftlikten Kapıya | Organik Süt & Süt Ürünleri</title>
+    <title>Yüksek Market | Organik Süt & Süt Ürünleri</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="style.css">
+    <style>
+        .category-filter-bar {
+            max-width: 1100px;
+            margin: 0 auto 25px;
+            padding: 0 20px;
+        }
+        .category-filter-title {
+            font-size: 14px;
+            font-weight: 700;
+            color: #00421f;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .category-filter-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .category-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 16px;
+            border-radius: 20px;
+            border: 1.5px solid #004e25;
+            background: #ffffff;
+            color: #2c5e43;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            user-select: none;
+            transition: all 0.15s ease;
+        }
+        .category-chip:hover {
+            background: #eef6f0;
+        }
+        .category-chip.active {
+            background: #005a2a;
+            color: #ffffff;
+        }
+    </style>
 </head>
 <body>
 
@@ -13,7 +56,7 @@
         <div class="nav-container">
             <div class="logo">
                 <div class="logo-icon">🥛</div>
-                <span>Doğal Çiftlik</span>
+                <span>Yüksek Market</span>
             </div>
             <div class="nav-right">
                 <div class="nav-location">
@@ -35,6 +78,12 @@
     </section>
 
     <main class="container">
+        <div class="category-filter-bar">
+            <div class="category-filter-title"><i class="fas fa-filter"></i> Kategoriye Göre Filtrele</div>
+            <div class="category-filter-list" id="categoryFilterList">
+                <span style="color:#999; font-size:13px;">Kategoriler yükleniyor...</span>
+            </div>
+        </div>
         <h2 class="section-title">Taze Ürünlerimiz</h2>
         <div class="product-grid" id="productGrid">
             </div>
@@ -88,7 +137,7 @@
             <div class="footer-section">
                 <h4>İletişim</h4>
                 <p><i class="fas fa-phone"></i> 0500 000 00 00</p>
-                <p><i class="fas fa-envelope"></i> info@dogalciftlik.com</p>
+                <p><i class="fas fa-envelope"></i> info@YüksekMarket.com</p>
                 <p><i class="fas fa-map-marker-alt"></i> Manisa, Türkiye</p>
             </div>
             <div class="footer-section">
@@ -99,7 +148,7 @@
             </div>
         </div>
         <div class="footer-bottom">
-            <p>&copy; 2026 Doğal Çiftlik. Tüm Hakları Saklıdır.</p>
+            <p>&copy; 2026 Yüksek Market. Tüm Hakları Saklıdır.</p>
         </div>
     </footer>
 
